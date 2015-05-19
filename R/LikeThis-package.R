@@ -10,7 +10,5 @@
 #'
 #' @name LikeThis-package
 #' @aliases LikeThis
-#' @useDynLib LikeThis
-#' @import Rcpp methods
-#' @seealso \code{\link{RegularExpression}}, \code{\link{RegExpR}}
+#' @seealso \code{\link{RegularExpression}}, \code{\link{RegExpR-class}}
 NULL

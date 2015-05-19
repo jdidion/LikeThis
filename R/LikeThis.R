@@ -28,15 +28,16 @@ methods=list(
             .self$options[[name]]
         }
         else {
-            .self$defaults[[name]]
+            value <- .self$defaults[[name]]
         }
     }
 ))
 
 #' Options
 #' 
+#' @name options
 #' @export
-options <- Options$new(
+delayedAssign("options", Options$new(
     libraries=list(
         default=RegExpR, 
         re2=function() {
@@ -47,7 +48,7 @@ options <- Options$new(
     defaults=list(
         lib=RegExpR
     )
-)
+))
 
 #' Class that encapsulates an re2 regexp and provides matching.
 #'
