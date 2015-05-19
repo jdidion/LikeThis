@@ -1,0 +1,14 @@
+Package: LikeThis
+Type: Package
+Title: Adds friendly and familiar infix regular expression operators to R.
+Version: 0.1
+Date: 2015-05-18
+Authors@R: c(
+    person("John", "Didion", , "code@didion.net", c("aut", "cre"))
+    )
+Description: Regular expressions are incredibly powerful tools for text pattern matching
+    and manipulation. Many languages provide an operator for regular expression matching,
+    generally following the '~' syntax of perl. In keeping with this tradition, LikeThis
+    (or "~this" for short) adds the '%~%' infix operator to R.
+License: GPL (>= 2)
+Suggests: Rre2
