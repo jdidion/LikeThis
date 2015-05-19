@@ -4,8 +4,12 @@
 \name{RegularExpression-class}
 \alias{RegularExpression}
 \alias{RegularExpression-class}
-\title{Class that encapsulates an re2 regexp and provides matching.}
+\title{Class that encapsulates a RegExp and provides matching. This class shouldn't
+be instantiated directly; instead use `get.regexp` or one of the infix
+operators.}
 \description{
-Class that encapsulates an re2 regexp and provides matching.
+Class that encapsulates a RegExp and provides matching. This class shouldn't
+be instantiated directly; instead use `get.regexp` or one of the infix
+operators.
 }
 

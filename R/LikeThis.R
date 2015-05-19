@@ -1,3 +1,30 @@
+#' Options
+#' 
+#' @name options
+#' @export
+delayedAssign("options", Options$new(
+    libraries=list(
+        default=RegExpR, 
+        re2=function() {
+            stopifnot(require(Rre2, quietly=TRUE))
+            RegExpRE2
+        }
+    ),
+    defaults=c(list(
+        lib=RegExpR,
+        match.var=".match",
+        enable.flags=TRUE
+    ), .supported.flags)
+))
+
+.supported.flags <- list(
+    ignore.case=FALSE,
+    multi.line=FALSE,
+    single.line=FALSE,
+    ungreedy=FALSE,
+    xtended=FALSE
+)
+
 Options <- setRefClass("Options",
 fields=list(libraries="list", options="list", defaults="list"),
 methods=list(
@@ -30,27 +57,20 @@ methods=list(
         else {
             value <- .self$defaults[[name]]
         }
+    },
+    get.flags=function(flags) {
+        for (n in names(.supported.flags)) {
+            if (!(n %in% names(flags))) {
+                flags[[n]] <- .self$get(n)
+            }
+        }
+        flags
     }
 ))
 
-#' Options
-#' 
-#' @name options
-#' @export
-delayedAssign("options", Options$new(
-    libraries=list(
-        default=RegExpR, 
-        re2=function() {
-            require(Rre2, quietly=TRUE)
-            RegExpRE2
-        }
-    ),
-    defaults=list(
-        lib=RegExpR
-    )
-))
-
-#' Class that encapsulates an re2 regexp and provides matching.
+#' Class that encapsulates a RegExp and provides matching. This class shouldn't
+#' be instantiated directly; instead use `get.regexp` or one of the infix
+#' operators.
 #'
 #' @name RegularExpression-class
 #' @aliases RegularExpression
@@ -66,9 +86,9 @@ methods=list(
     #' @param pattern an re2-compatible regular expression
     #' (POSIX or PERL, although some PERL symbols are not
     #' supported).
-    initialize=function(..., pattern=character()) {
+    initialize=function(..., pattern=character(), flags=list()) {
         .self$pattern <- pattern
-        .self$regexp <- options$get("lib")$new(pattern)
+        .self$regexp <- options$get("lib")$new(pattern, flags)
         .self
     },
     #' Match a string (or vector of strings) against
@@ -82,37 +102,129 @@ methods=list(
     }
 ))
 
-#' Fetch a cached regexp for `pattern` if it was
-#' previously requested, or compile the pattern and cache the
-#' regexp.
+#' Fetch a cached regexp for `pattern` if it was previously requested, 
+#' or compile the pattern and cache the regexp.
 #'
-#' @param pattern character vector of POSIX-compatible regular
-#' expressions.
+#' @param pattern Perl-compatible regular expression.
+#' @param opts regular expression flags
 #' @param recompile ignore any cached regexp for `pattern`
 #'
 #' @return `RegularExpression` object (regexp)
 #' @export
-get.regexp <- function(pattern, recompile=FALSE) {
-    if (!recompile && pattern %in% names(attr(get.regexp, "cache"))) {
-        regexp <- cache[[pattern]]
+get.regexp <- function(pattern, flags=list(), recompile=FALSE) {
+    if (options$get("enable.flags")) {
+        flags <- options$get.flags(flags)
+        key <- paste(c(pattern, flags), collapse="/")
     }
     else {
-        regexp <- RegularExpression$new(pattern=pattern)
-        attr(get.regexp, "cache")[[pattern]] <- regexp
+        flags <- NULL
+        key <- pattern
+    }
+    if (!recompile && pattern %in% names(attr(get.regexp, "cache"))) {
+        regexp <- cache[[key]]
+    }
+    else {
+        regexp <- RegularExpression$new(pattern=pattern, flags=flags)
+        attr(get.regexp, "cache")[[key]] <- regexp
     }
     regexp
 }
 attr(get.regexp, "cache") <- list()
 
-LikeThis <- function() {
-    function(lhs, rhs) {
-        regexp <- get.regexp(rhs)
-        regexp$match(lhs)
+#' Convenience function for passing a pattern and flags to the right-hand side
+#' of an infix regular expression operator.
+#' 
+#' @param pattern
+#' @param ... flag names (can be single-character)
+#' 
+#' @return RegularExpression
+#' 
+#' @examples
+#' # matches because the 'i' flag makes it case-insensitive
+#' # and the 's' flag matches the dot to newlines
+#' 'a\nb' %~% RE('A.B', 'i', 's') 
+#' 
+#' @export
+RE <- function(pattern, ...) {
+    flags <- c(...)
+    if (length(flags) > 0) {
+        flag.names <- match.arg(flags, names(.supported.flags), several.ok=TRUE)
+        flags <- rep(TRUE, length(flags))
+        names(flags) <- flag.names
     }
+    get.regexp(pattern, flags)
 }
 
-#' LikeThis match operator.
+#' Infix regular expression match operator.
 #'
-#' @rdname pipe
+#' Note: if lhs is not a string, this method tries to coerce
+#' it to one.
+#'
+#' @param lhs the string to be matched
+#' @param rhs a regular expression string or RegularExpression
+#' object (obtained from `get.regexp` or `RE`).
+#' 
+#' @return a `MatchResult` if there was a match, otherwise NULL.
+#'
+#' @rdname match
 #' @export
-`%~%`  <- LikeThis()
+`%~%` <- function(lhs, rhs) {
+    if (!is.character(lhs)) {
+        lhs <- as.character(lhs)
+    }
+    if (is.character(rhs)) {
+        rhs <- get.regexp(rhs)
+    }
+    stopifnot(is(rhs, RegularExpression))
+    rhs$match(lhs)
+}
+
+#' Infix regular expression match operator with
+#' side effects.
+#' 
+#' If there is a match, returns TRUE and also
+#' assigns the match result to a variable in the
+#' current environment (`.match` by default).
+#'
+#' Note: if lhs is not a string, this method tries to coerce
+#' it to one.
+#' 
+#' @param lhs the string to be matched
+#' @param rhs a regular expression string or RegularExpression
+#' object (obtained from `get.regexp` or `RE`).
+#' 
+#' @return logical
+#' 
+#' @note due to the way scoping works in R, the
+#' value of the match variable will be overwritten
+#' upon each use of this operator. To perform nested
+#' use of this operator, you need to place each within
+#' a `local()` block.
+#' 
+#' @examples
+#' # prints 'a'; .match is set in the calling environment
+#' if ('a' %?~% '([ab])') print(.match$group(1)) 
+#' 
+#' # prints 'a'; .match is *not* set in the calling environment
+#' local(if ('a' %?~% '([ab])') print(.match$group(1))) # prints 'a'; 
+#' 
+#' @seealso local
+#' @export
+`%?~%` <- function(lhs, rhs) {
+    if (!is.character(lhs)) {
+        lhs <- as.character(lhs)
+    }
+    if (is.character(rhs)) {
+        rhs <- get.regexp(rhs)
+    }
+    stopifnot(is(rhs, RegularExpression))
+    match <- regexp$match(lhs)
+    if (is.null(match)) {
+        assign(options$get("match.var"), NULL)
+        FALSE
+    }
+    else {
+        assign(options$get("match.var"), match, envir=parent.frame())
+        TRUE
+    }
+}

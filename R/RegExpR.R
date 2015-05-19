@@ -12,7 +12,18 @@ methods=list(
     #' @param pattern an re2-compatible regular expression
     #' (POSIX or PERL, although some PERL symbols are not
     #' supported).
-    initialize=function(pattern) {
+    initialize=function(pattern, flags=NULL) {
+        if (!is.null(flags) && length(flags) > 0) {
+            flag.str <- paste0(
+                .flag.set(flags, 'ignore.case', 'i', ''),
+                .flag.set(flags, 'multi.line', 'm', ''),
+                .flag.set(flags, 'single.line', 's', ''),
+                .flag.set(flags, 'xtended', 'x', '')
+            )
+            if (nchar(flag.str) > 0) {
+                pattern <- paste0("(?", flag.str, ")", pattern)    
+            }
+        }
         .self$pattern <- pattern
         .self
     },
@@ -24,17 +35,17 @@ methods=list(
     #' @return a MatchResult object
     match=function(x) {
         result <- regexpr(.self$pattern, x, perl=T)
-        .create.MatchResult(x, result)
+        if (result[1] == -1) {
+            NULL
+        }
+        else {
+            MatchResultR$new(text=x, result=result)
+        }
     }
 ))
 
-.create.MatchResult <- function(text, result) {
-    if (result[1] == -1) {
-        NULL
-    }
-    else {
-        MatchResultR$new(text=text, result=result)
-    }
+.flag.set <- function(flags, name, when.true=TRUE, when.false=FALSE) {
+    ifelse(name %in% names(flags) && flags[[name]], when.true, when.false)
 }
 
 #' MatchResult object encapsulating regexec match results.
@@ -56,25 +67,36 @@ methods=list(
         .self$num.groups <- N
         .self
     },
-    group=function(idx) {
-        if (idx > .self$num.groups) {
-            stop(paste("Invalid group:", idx))
-        }
-        if (is.na(.self$groups[idx+1])) {
-            if (idx == 0) {
-                start <- .self$result[1]
-                end <- start + attr(.self$result, "match.length", exact=TRUE) - 1
-            }
-            else {
-                start <- attr(.self$result, "capture.start", exact=TRUE)[idx]
-                end <- start + attr(.self$result, "capture.length", exact=TRUE)[idx] - 1
-            }
-            group <- substr(.self$text, start, end)
-            .self$groups[idx+1] <- group
+    group=function(i) {
+        if (is.vector(i)) {
+            sapply(i, function(j) .self$group(j))
         }
         else {
-            group <- .self$groups[idx+1]
+            if (i > .self$num.groups) {
+                stop(paste("Invalid group:", i))
+            }
+            if (is.na(.self$groups[i+1])) {
+                if (i == 0) {
+                    start <- .self$result[1]
+                    end <- start + attr(.self$result, "match.length", exact=TRUE) - 1
+                }
+                else {
+                    start <- attr(.self$result, "capture.start", exact=TRUE)[i]
+                    end <- start + attr(.self$result, "capture.length", exact=TRUE)[i] - 1
+                }
+                group <- substr(.self$text, start, end)
+                .self$groups[i+1] <- group
+            }
+            else {
+                group <- .self$groups[i+1]
+            }
+            group
         }
-        group
     }
 ))
+setMethod("[", c("MatchResultR", "numeric", "missing", "ANY"), function(x, i, j, ..., drop=TRUE) {
+    x$group(i)
+})
+setMethod("[[", c("MatchResultR", "numeric", "missing"), function(x, i, j, ...) {
+    x$group(i)
+})

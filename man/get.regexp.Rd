@@ -2,24 +2,23 @@
 % Please edit documentation in R/LikeThis.R
 \name{get.regexp}
 \alias{get.regexp}
-\title{Fetch a cached regexp for `pattern` if it was
-previously requested, or compile the pattern and cache the
-regexp.}
+\title{Fetch a cached regexp for `pattern` if it was previously requested,
+or compile the pattern and cache the regexp.}
 \usage{
-get.regexp(pattern, recompile = FALSE)
+get.regexp(pattern, flags = list(), recompile = FALSE)
 }
 \arguments{
-\item{pattern}{character vector of POSIX-compatible regular
-expressions.}
+\item{pattern}{Perl-compatible regular expression.}
 
 \item{recompile}{ignore any cached regexp for `pattern`}
+
+\item{opts}{regular expression flags}
 }
 \value{
 `RegularExpression` object (regexp)
 }
 \description{
-Fetch a cached regexp for `pattern` if it was
-previously requested, or compile the pattern and cache the
-regexp.
+Fetch a cached regexp for `pattern` if it was previously requested,
+or compile the pattern and cache the regexp.
 }
 
