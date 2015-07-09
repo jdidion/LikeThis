@@ -32,3 +32,4 @@ result$group(1) # prints 'a'
     ```
 4. Provide substitution operator
 5. Provide mechanism for setting matching options
+6. Consider using stringi under the hood: http://www.r-pkg.org/pkg/stringi
