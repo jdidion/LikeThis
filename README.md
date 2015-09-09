@@ -23,12 +23,4 @@ result$group(1) # prints 'a'
 
 1. Add unit tests
 2. Vectorization
-3. Provide additional operator that will return a logical and give access to captured groups as variables within the local context of the match, e.g.
-    
-    ```r
-    if ('a' %?~% '([ab])') {
-        print(.match[1])
-    }
-    ```
-4. Provide substitution operator
-5. Provide mechanism for setting matching options
+3. Provide substitution operator

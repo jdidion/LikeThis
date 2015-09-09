@@ -2,12 +2,4 @@
 
 export("%?~%")
 export("%~%")
-export(MatchResultR)
 export(RE)
-export(RegExpR)
-export(RegularExpression)
-export(get.regexp)
-export(options)
-exportClasses(MatchResultR)
-exportClasses(RegExpR)
-exportClasses(RegularExpression)

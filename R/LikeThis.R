@@ -1,7 +1,6 @@
 #' Options
 #' 
 #' @name options
-#' @export
 delayedAssign("options", Options$new(
     libraries=list(
         default=RegExpR, 
@@ -75,8 +74,6 @@ methods=list(
 #' @name RegularExpression-class
 #' @aliases RegularExpression
 #' @rdname RegularExpression-class
-#' @exportClass RegularExpression
-#' @export RegularExpression
 RegularExpression <- setRefClass("RegularExpression",
 fields=c("pattern", "regexp"),
 methods=list(
@@ -99,6 +96,9 @@ methods=list(
     #' @return a MatchResult object
     match=function(x) {
         .self$regexp$match(x);
+    },
+    substitute=function(x, replacement) {
+        .self$regexp$substitute(x, replacement)
     }
 ))
 
@@ -110,7 +110,6 @@ methods=list(
 #' @param recompile ignore any cached regexp for `pattern`
 #'
 #' @return `RegularExpression` object (regexp)
-#' @export
 get.regexp <- function(pattern, flags=list(), recompile=FALSE) {
     if (options$get("enable.flags")) {
         flags <- options$get.flags(flags)
@@ -155,13 +154,33 @@ RE <- function(pattern, ...) {
     get.regexp(pattern, flags)
 }
 
+#' Convenience function for passing a pattern, replacement and flags 
+#' to the right-hand side of an infix regular expression operator.
+#' 
+#' @param pattern
+#' @param replacement
+#' @param ... flag names (can be single-character)
+#' 
+#' @return list(RegularExpression, replacement)
+#' 
+#' @examples
+#' # matches because the 'i' flag makes it case-insensitive
+#' # and the 's' flag matches the dot to newlines
+#' 'a\nb' %!~% SUB('A.B', 'x', 'i', 's') 
+#' 
+#' @export
+SUB <- function(pattern, replacement, ...) {
+    list(RE(pattern, ...), replacement)
+}
+
 #' Infix regular expression match operator.
 #'
 #' Note: if lhs is not a string, this method tries to coerce
 #' it to one.
 #'
 #' @param lhs the string to be matched
-#' @param rhs a regular expression string or RegularExpression
+#' @param rhs a regular expression string 'pattern/flags', 
+#' character vector ('pattern', 'flags'), or RegularExpression
 #' object (obtained from `get.regexp` or `RE`).
 #' 
 #' @return a `MatchResult` if there was a match, otherwise NULL.
@@ -179,6 +198,10 @@ RE <- function(pattern, ...) {
     rhs$match(lhs)
 }
 
+#' Internal variable that is set to the most recent
+#' match result by `%?~%`.
+last.match <- NULL
+
 #' Infix regular expression match operator with
 #' side effects.
 #' 
@@ -190,7 +213,8 @@ RE <- function(pattern, ...) {
 #' it to one.
 #' 
 #' @param lhs the string to be matched
-#' @param rhs a regular expression string or RegularExpression
+#' @param rhs a regular expression string 'pattern/flags', 
+#' character vector ('pattern', 'flags'), or RegularExpression
 #' object (obtained from `get.regexp` or `RE`).
 #' 
 #' @return logical
@@ -221,10 +245,29 @@ RE <- function(pattern, ...) {
     match <- regexp$match(lhs)
     if (is.null(match)) {
         assign(options$get("match.var"), NULL)
+        last.match <<- NULL
         FALSE
     }
     else {
         assign(options$get("match.var"), match, envir=parent.frame())
+        last.match <<- match
         TRUE
+    }
+}
+
+#' Infix substitution operator.
+#' 
+#' @param lhs the string to be matched
+#' @param rhs a string '/pattern/replacement/flags', a vector 
+#' ('pattern', 'replacement' [, 'flags']) or a 
+#' list(RegularExpression, replacement) from calling `SUB`.
+#' 
+#' @export
+`%!~%` <- function(lhs, rhs) {
+    if (!is.character(lhs)) {
+        lhs <- as.character(lhs)
+    }
+    if (is.character(rhs)) {
+        rhs <- get.regexp(rhs)
     }
 }

@@ -4,8 +4,6 @@
 #' @name RegExpR-class
 #' @aliases RegExpR
 #' @rdname RegExpR-class
-#' @exportClass RegExpR
-#' @export RegExpR
 RegExpR <- setRefClass("RegExpR",
 fields=c("pattern"),
 methods=list(
@@ -41,6 +39,10 @@ methods=list(
         else {
             MatchResultR$new(text=x, result=result)
         }
+    },
+    #' Substitute
+    substitute=function(x, replacement) {
+        gsub(.self$pattern, replacement, x, perl=TRUE)
     }
 ))
 
@@ -53,8 +55,6 @@ methods=list(
 #' @name MatchResultR-class
 #' @aliases MatchResultR
 #' @rdname MatchResultR-class
-#' @exportClass MatchResultR
-#' @export MatchResultR
 MatchResultR <- setRefClass("MatchResultR",
 fields=c("text", "result", "groups", "num.groups"),
 methods=list(
